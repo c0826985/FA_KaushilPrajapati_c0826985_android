@@ -7,6 +7,7 @@ import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Adapter;
 import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -78,8 +79,8 @@ public class PlacesListAdapter extends RecyclerView.Adapter<PlacesListAdapter.Vi
             public void onClick(View view) {
                 Intent intent = new Intent(context ,MapsActivity.class);
 
-                intent.putExtra("TYPE","");
-                //intent.putExtra("Model", placesModelArrayList);
+                //intent.putExtra("TYPE","");
+                intent.putExtra("Place", holder.getAdapterPosition());
 
                 context.startActivity(intent);
                 String updatestring =  MainActivity.arrayList.get(holder.getAdapterPosition()+1);

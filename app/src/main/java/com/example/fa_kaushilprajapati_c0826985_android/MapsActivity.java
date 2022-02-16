@@ -9,6 +9,7 @@ import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -28,6 +29,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.example.fa_kaushilprajapati_c0826985_android.databinding.ActivityMapsBinding;
+import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -41,7 +43,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     LocationListener locationListener;
     Marker myMarker;
     public String loc;
-
+    public LatLng favLOC;
+    public LatLng currLOC;
     ArrayList<PlacesModel> placesModelArrayList = new ArrayList<>();
     DBHelper dbHelper = new DBHelper(MapsActivity.this);
     PlacesListAdapter placesListAdapter = new PlacesListAdapter(placesModelArrayList,dbHelper);
@@ -54,9 +57,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void centerOnLocation(Location location,String title)
     {
         //mMap.clear();
-        LatLng location1 = new LatLng(location.getLatitude(),location.getLongitude());
-        mMap.addMarker(new MarkerOptions().position(location1).title(title));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(location1));
+        currLOC = new LatLng(location.getLatitude(),location.getLongitude());
+        mMap.addMarker(new MarkerOptions().position(currLOC).title(title));
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(currLOC));
 
     }
     @Override
@@ -84,6 +87,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
 
         showPlaces = findViewById(R.id.showPlaces);
        // changeMap = findViewById(R.id.changeMap);
@@ -157,10 +161,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }
             else{
-                //Location favLocation = new Location(LocationManager.GPS_PROVIDER);
-               // favLocation.setLatitude(MainActivity.location.get(intent.getIntExtra("Your Location",0)).latitude);
-               // favLocation.setLongitude(MainActivity.location.get(intent.getIntExtra("Your Location",0)).longitude);
-                //centerOnLocation(favLocation,MainActivity.arrayList.get(intent.getIntExtra("Your Location",0)));
+                Location favLocation = new Location(LocationManager.GPS_PROVIDER);
+                favLocation.setLatitude(MainActivity.location.get(intent.getIntExtra("Your Location",0)).latitude);
+                favLocation.setLongitude(MainActivity.location.get(intent.getIntExtra("Your Location",0)).longitude);
+                centerOnLocation(favLocation,MainActivity.arrayList.get(intent.getIntExtra("Your Location",0)));
             }
             mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
                 @Override
@@ -182,35 +186,69 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm dd-mm-yyyy");
                             FAVlocation+=sdf.format(new Date());
                         }
-                        LatLng latLng1 = new LatLng(latLng.latitude,latLng.longitude);
+                        favLOC = new LatLng(latLng.latitude,latLng.longitude);
 
-                       myMarker =  mMap.addMarker(new MarkerOptions().icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)).position(latLng1).title(FAVlocation).draggable(true));
-
-                        myMarker.setPosition(latLng1);
-                        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng1));
-
+                        myMarker =  mMap.addMarker(new MarkerOptions().icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)).position(favLOC).title(FAVlocation).draggable(true));
+                        myMarker.setPosition(favLOC);
+                        mMap.moveCamera(CameraUpdateFactory.newLatLng(favLOC));
                         dbHelper.insertPlaces(FAVlocation);
-
                         placesListAdapter.notifyDataSetChanged();
                         Toast.makeText(MapsActivity.this, "Favourite Location Added", Toast.LENGTH_SHORT).show();
 
                         MainActivity.arrayList.add(FAVlocation);
 
-                        MainActivity.location.add(latLng1);
-
+                        MainActivity.location.add(favLOC);
+                        drawLine();
                         MainActivity.adapter.notifyDataSetChanged();
                     }
                     catch (Exception e){
                         e.printStackTrace();
                     }
+
+
+
+
+
+
+
                 }
             });
 
 
 
 
+
+
+    }
+    private void drawLine(){
+        if (favLOC.longitude!= 0 && favLOC.latitude != 0 && currLOC.latitude != 0 && currLOC.longitude != 0) {
+            PolylineOptions line =
+                    new PolylineOptions().add(
+                            new LatLng(favLOC.latitude, favLOC.longitude),
+                            new LatLng(currLOC.latitude,
+                                    currLOC.longitude))
+                            .width(5).color(Color.RED);
+            mMap.addPolyline(line);
+             calculateDistance(new LatLng(currLOC.latitude, currLOC.longitude), new LatLng(favLOC.latitude, favLOC.longitude));
+        }
     }
 
+                        public void calculateDistance(LatLng StartP, LatLng EndP) {
+                        int Radius = 6371;
+                        double lat1 = StartP.latitude;
+                        double lat2 = EndP.latitude;
+                        double lon1 = StartP.longitude;
+                        double lon2 = EndP.longitude;
+                        double dLat = Math.toRadians(lat2 - lat1);
+                        double dLon = Math.toRadians(lon2 - lon1);
+                        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                        double c = 2 * Math.asin(Math.sqrt(a));
+                        double valueResult = Radius * c;
+                        binding.distance.setVisibility(View.VISIBLE);
+                        binding.distance.setText("Total Distance to the last marked Favourite place is :" + valueResult + "KM");
+                    }
 
 
 

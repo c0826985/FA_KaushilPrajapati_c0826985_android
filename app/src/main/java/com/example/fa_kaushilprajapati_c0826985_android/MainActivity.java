@@ -98,7 +98,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-
     }
     private void getGGData() {
         cursor = dbHelper.getData();
