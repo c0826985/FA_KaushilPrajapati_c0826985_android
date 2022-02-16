@@ -16,6 +16,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -36,12 +37,13 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
-
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback  {
+    private static final String TAG = "MapsActivity";
     LocationManager locationManager;
     LocationListener locationListener;
-    Marker myMarker;
+    Marker myMarker,finalMarker;
     public String loc;
     public LatLng favLOC;
     public LatLng currLOC;
@@ -49,8 +51,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     DBHelper dbHelper = new DBHelper(MapsActivity.this);
     PlacesListAdapter placesListAdapter = new PlacesListAdapter(placesModelArrayList,dbHelper);
 
+    private int id;
+    PlacesModel placesModel;
     private GoogleMap mMap;
-    Button showPlaces,normal,satellite,hybrid,terrain;
+    Button showPlaces;
     private ActivityMapsBinding binding;
 
 
@@ -83,12 +87,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-
-
         showPlaces = findViewById(R.id.showPlaces);
        // changeMap = findViewById(R.id.changeMap);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
@@ -139,7 +139,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         Intent intent = getIntent();
-        if(intent.getIntExtra("Place", 0)==0) {
+        PlacesModel placesModel = intent.getParcelableExtra("place");
+
+        if(intent.getIntExtra("place", 0)==0) {
             locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
             locationListener = new LocationListener() {
                 @Override
@@ -166,6 +168,42 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 favLocation.setLongitude(MainActivity.location.get(intent.getIntExtra("Your Location",0)).longitude);
                 centerOnLocation(favLocation,MainActivity.arrayList.get(intent.getIntExtra("Your Location",0)));
             }
+
+            if(placesModel != null )
+            {
+                id = placesModel.id;
+                Location location = new Location(LocationManager.GPS_PROVIDER);
+                location.setLatitude(placesModel.Latitude);
+                location.setLongitude(placesModel.Longitude);
+
+                LatLng latLng = new LatLng(location.getLatitude(),location.getLongitude());
+                mMap.addMarker(new MarkerOptions().position(latLng).title(placesModel.address).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)).draggable(true));
+               // drawLine();
+            }
+
+
+        mMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
+            @Override
+            public void onMarkerDrag(@NonNull Marker marker) {
+
+            }
+
+            @Override
+            public void onMarkerDragEnd(@NonNull Marker marker) {
+
+                  marker.setTitle(com.example.fa_kaushilprajapati_c0826985_android.Address.getAddress(marker.getPosition().latitude,marker.getPosition().longitude, MapsActivity.this));
+                if(placesModel != null) {
+                    dbHelper.updatePlaces(placesModel, com.example.fa_kaushilprajapati_c0826985_android.Address.getAddress(marker.getPosition().latitude, marker.getPosition().longitude, MapsActivity.this), marker.getPosition().latitude, marker.getPosition().longitude);
+                    placesListAdapter.notifyDataSetChanged();
+                    Toast.makeText(MapsActivity.this, "Favourite Location Updated", Toast.LENGTH_SHORT).show();
+                }
+            }
+            @Override
+            public void onMarkerDragStart(@NonNull Marker marker) {
+
+            }
+        });
+
             mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
                 @Override
                 public void onMapLongClick(@NonNull LatLng latLng) {
@@ -188,10 +226,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         }
                         favLOC = new LatLng(latLng.latitude,latLng.longitude);
 
-                        myMarker =  mMap.addMarker(new MarkerOptions().icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)).position(favLOC).title(FAVlocation).draggable(true));
+                        myMarker =  mMap.addMarker(new MarkerOptions().icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)).position(favLOC).title(FAVlocation));
                         myMarker.setPosition(favLOC);
                         mMap.moveCamera(CameraUpdateFactory.newLatLng(favLOC));
-                        dbHelper.insertPlaces(FAVlocation);
+                        dbHelper.insertPlaces(FAVlocation, latLng.latitude, latLng.longitude);
                         placesListAdapter.notifyDataSetChanged();
                         Toast.makeText(MapsActivity.this, "Favourite Location Added", Toast.LENGTH_SHORT).show();
 
@@ -205,21 +243,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         e.printStackTrace();
                     }
 
-
-
-
-
-
-
                 }
             });
 
-
-
-
-
-
     }
+
     private void drawLine(){
         if (favLOC.longitude!= 0 && favLOC.latitude != 0 && currLOC.latitude != 0 && currLOC.longitude != 0) {
             PolylineOptions line =
@@ -232,7 +260,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
              calculateDistance(new LatLng(currLOC.latitude, currLOC.longitude), new LatLng(favLOC.latitude, favLOC.longitude));
         }
     }
-
                         public void calculateDistance(LatLng StartP, LatLng EndP) {
                         int Radius = 6371;
                         double lat1 = StartP.latitude;
@@ -247,9 +274,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         double c = 2 * Math.asin(Math.sqrt(a));
                         double valueResult = Radius * c;
                         binding.distance.setVisibility(View.VISIBLE);
-                        binding.distance.setText("Total Distance to the last marked Favourite place is :" + valueResult + "KM");
+                        binding.distance.setText("Total Distance to the last marked Favourite place is :" + String.format("%.2f",valueResult) + "KM");
                     }
 
-
-
-}
+                    }

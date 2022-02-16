@@ -42,6 +42,7 @@ public class PlacesListAdapter extends RecyclerView.Adapter<PlacesListAdapter.Vi
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        PlacesModel places = placesModelArrayList.get(position);
         TextView addresstv;
         ImageView statimage,edit;
         CheckBox checkBox;
@@ -56,7 +57,7 @@ public class PlacesListAdapter extends RecyclerView.Adapter<PlacesListAdapter.Vi
         statimage.setImageResource(R.drawable.ic_baseline_place_24);
         edit.setImageResource(R.drawable.ic_baseline_edit_24);
 
-        checkBox.setChecked(placesModelArrayList.get(position).getChecked());
+//        checkBox.setChecked(placesModelArrayList.get(position).getChecked());
 
         checkBox.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -78,13 +79,11 @@ public class PlacesListAdapter extends RecyclerView.Adapter<PlacesListAdapter.Vi
             @Override
             public void onClick(View view) {
                 Intent intent = new Intent(context ,MapsActivity.class);
-
-                //intent.putExtra("TYPE","");
-                intent.putExtra("Place", holder.getAdapterPosition());
-
+                intent.putExtra("place", places);
                 context.startActivity(intent);
-                String updatestring =  MainActivity.arrayList.get(holder.getAdapterPosition()+1);
-                dbHelper.updatePlaces(addresstv.getText().toString(), updatestring);
+               // String updatestring =  MainActivity.arrayList.get(holder.getAdapterPosition()+1);
+                //dbHelper.updatePlaces(addresstv.getText().toString(), updatestring);
+
             }
         });
 

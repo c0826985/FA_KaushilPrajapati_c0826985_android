@@ -15,7 +15,7 @@ import java.util.HashMap;
 public class DBHelper extends SQLiteOpenHelper {
     @Override
     public void onCreate(SQLiteDatabase sqLiteDatabase) {
-        sqLiteDatabase.execSQL("Create Table places(address TEXT primary key)");
+        sqLiteDatabase.execSQL("Create Table places(id INTEGER primary key AUTOINCREMENT,address TEXT,Latitude Text, Longitude Text )");
     }
 
     @Override
@@ -28,35 +28,36 @@ public class DBHelper extends SQLiteOpenHelper {
         super(context, "favouritePlaces", null, 1);
     }
 
-    public boolean insertPlaces(String address) {
+    public long insertPlaces(String address, Double Latitude, Double Longitude) {
+        SQLiteDatabase sqLiteDatabase = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+
+        contentValues.put("address", address);
+        contentValues.put("Latitude", Latitude);
+        contentValues.put("Longitude", Longitude);
+        long result = sqLiteDatabase.insert("places", null, contentValues);
+        sqLiteDatabase.close();
+
+        return result;
+
+//        if (result == -1) {
+//            return false;
+//        } else
+//            return true;
+    }
+
+    public int updatePlaces(PlacesModel places, String address, Double Latitude,Double Longitude) {
         SQLiteDatabase sqLiteDatabase = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();
         contentValues.put("address", address);
-        long result = sqLiteDatabase.insert("places", null, contentValues);
-        sqLiteDatabase.close();
-        if (result == -1) {
-            return false;
-        } else
-            return true;
-    }
+        contentValues.put("Latitude", Latitude);
+        contentValues.put("Longitude", Longitude);
+        Cursor cursor = sqLiteDatabase.rawQuery("Select * from places where id = ?", new String[]{address});
 
-    public Boolean updatePlaces(String address, String updateAddress) {
-        SQLiteDatabase sqLiteDatabase = this.getWritableDatabase();
-        ContentValues contentValues = new ContentValues();
-        contentValues.put("address", updateAddress);
-        Cursor cursor = sqLiteDatabase.rawQuery("Select * from places where address = ?", new String[]{address});
 
-        if (cursor.getCount() > 0) {
+            return sqLiteDatabase.update("places", contentValues, "id=?", new String[]{String.valueOf(places.getId())});
 
-            long result = sqLiteDatabase.update("places", contentValues, "address=?", new String[]{updateAddress});
-            sqLiteDatabase.close();
-            cursor.close();
-            if (result == -1) {
-                return false;
-            } else
-                return true;
-        } else
-            return false;
+
     }
 
     public Boolean deletePlaces(String address) {
@@ -81,16 +82,23 @@ public class DBHelper extends SQLiteOpenHelper {
         return cursor;
     }
 
+    @SuppressLint("Range")
     public ArrayList<PlacesModel> getAll() {
-        SQLiteDatabase db = getReadableDatabase();
+        SQLiteDatabase db = this.getWritableDatabase();
         ArrayList<PlacesModel> myRes = new ArrayList<>();
-        Cursor cursor = db.rawQuery("Select * from places", null);
-        if (cursor.moveToNext()) {
+        Cursor cursor = db.rawQuery("Select * From places", null);
+
+        if (cursor.moveToFirst()){
             do {
-                myRes.add(new PlacesModel(cursor.getString(0), false));
+               // PlacesModel placesModel = new PlacesModel(cursor.getInt(cursor.getColumnIndex("id")), cursor.getString(cursor.getColumnIndex("address")), cursor.getDouble(cursor.getColumnIndex("Latitude")),cursor.getDouble(cursor.getColumnIndex("Longitude")));
+                    PlacesModel placesModel = new PlacesModel();
+                    placesModel.setId(cursor.getInt(cursor.getColumnIndex("id")));
+                    placesModel.setAddress(cursor.getString(cursor.getColumnIndex("address")));
+                    placesModel.setLatitude(cursor.getDouble(cursor.getColumnIndex("Latitude")));
+                    placesModel.setLongitude(cursor.getDouble(cursor.getColumnIndex("Longitude")));
+                myRes.add(placesModel);
             } while (cursor.moveToNext());
         }
-        cursor.close();
         return myRes;
     }
 }
